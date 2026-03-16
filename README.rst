@@ -37,6 +37,11 @@ qa4sm-api
     Add a short description here!
 
 
+Environment variables
+
+- QA4SM_DOTRC_PATH: Path to the dotrc file that contains the API URL and token.
+
+
 A longer description of your project goes here...
 
 
