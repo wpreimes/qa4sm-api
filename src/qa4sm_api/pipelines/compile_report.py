@@ -34,7 +34,6 @@ t = run1.timing()
 report = AutoReportCompiler(
     runs=[run1, run2],
     series_root=series_root,
-    name=report_name,
 )
 
 assert report.validations_complete()

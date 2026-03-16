@@ -1,5 +1,5 @@
 import os
-import tempfile
+from tempfile import TemporaryDirectory
 from pathlib import Path
 
 from qa4sm_api.client_api import Connection
@@ -17,7 +17,8 @@ def test_compile_report_from_template():
     report_name = "20220701_20220930"
 
     qa4sm = Connection(QA4SM_IP_OR_URL, QA4SM_API_TOKEN)
-    with tempfile.mkdtemp() as series_root:
+    with TemporaryDirectory() as series_root:
+        series_root = Path(series_root)
         name1 = "01-SmosL2-vs-C3sComb-abs"
         id1 = "6eb61199-59b8-4ecc-8e3c-7b1139df4a05"
         path1 = series_root / "01-SmosL2-vs-C3sComb-abs"
@@ -38,7 +39,6 @@ def test_compile_report_from_template():
         report = AutoReportCompiler(
             runs=[run1, run2],
             series_root=series_root,
-            name=report_name,
         )
 
         assert report.validations_complete()
@@ -49,3 +49,7 @@ def test_compile_report_from_template():
             from_scratch=True,
             template_path= os.path.join(os.path.dirname(__file__), "template"),
         )
+
+
+if __name__ == '__main__':
+    test_compile_report_from_template()

@@ -339,7 +339,7 @@ class AutoReportCompiler:
         from_scratch: bool, optional
             Download and collect data, even if it already exists.
         """
-        # self.collect_content(from_scratch)  # todo: include!
+        self.collect_content(from_scratch)  # todo: include!
         template_path = Path(template_path)
 
         for file in os.listdir(template_path):
