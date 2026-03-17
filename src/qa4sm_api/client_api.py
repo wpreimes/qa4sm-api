@@ -1,6 +1,5 @@
 import json
 import warnings
-
 import requests
 import time
 import pandas as pd
@@ -9,14 +8,13 @@ import os
 import zipfile
 from pathlib import Path
 from datetime import datetime
-
 from tornado.httpclient import HTTPError
-
 from qa4sm_api.globals import (
-    QA4SM_TOKEN,
+    QA4SM_ACCESS,
     ValidationRunNotFoundError,
     TOKEN_WARNING, TOKEN_ERROR
 )
+
 
 class Response:
     def __init__(self, response, serialize=True):
@@ -75,22 +73,26 @@ class Session:
         self.headers = {
             "Content-Type": "application/json"
         }
-        self.base_url = f"{protocol}://{instance}/"
+        self.instance = instance
+        self.base_url = f"{protocol}://{self.instance}/"
         self.api_url = self.base_url + "api/"
 
         self.client = requests.Session()
         self.response = None
 
         if token == "auto":
-            if QA4SM_TOKEN is None:
+            if QA4SM_ACCESS is None:
                 token = 'none'
                 warnings.warn(TOKEN_WARNING)
         elif token == "file":
-            if QA4SM_TOKEN is None:
+            if QA4SM_ACCESS is None:
                 raise TOKEN_ERROR
-
-        if token.lower() == 'none':
+            else:
+                token = QA4SM_ACCESS[self.instance]['token']
+        elif token.lower() == 'none':
             token = None
+        else:  # token direct
+            token = token
 
         self.user = None
         if token is not None:
@@ -184,7 +186,7 @@ class Session:
 
 class ValidationConfiguration:
     def __init__(self, config_data: dict):
-        self.data = config_data
+        self.data = config_data[0] if len(config_data) == 1 else config_data
 
     def __getitem__(self, item):
         return self.data[item]
@@ -193,6 +195,9 @@ class ValidationConfiguration:
         if key not in self.data.keys():
             raise KeyError(f"{key} is not in the configuration.")
         self.data[key] = value
+
+    def __eq__(self, other):
+        return self.data == other.data
 
     def dump(self, path):
         """
@@ -205,6 +210,29 @@ class ValidationConfiguration:
         """
         with open(Path(path), 'w') as jfile:
             json.dump(self.data, jfile, indent=2)
+
+    @classmethod
+    def from_remote(cls, run_id, **connection_kwargs):
+        """
+        Load a configuration from an existing remote run. Configs are
+        public, so it's not necessary to authenticate.
+
+        Parameters
+        ----------
+        run_id: str
+            UID of the validation run at the chosen instance
+            (see connection_kwargs).
+        instance: str, optional (default: "qa4ms.eu")
+            see qa4sm_api.client_api.Connection
+        token: str, optional
+            see qa4sm_api.client_api.Connection
+        protocol: str, optional
+            see qa4sm_api.client_api.Connection
+        """
+        connection = Connection(**connection_kwargs)
+        config = connection.download_configuration(run_id=run_id)
+        return cls(config_data=config.data)
+
 
     @classmethod
     def from_file(cls, path):
@@ -237,12 +265,12 @@ class Connection:
             - test.qa4sm.eu [test]
             - test2.qa4sm.eu [test2]
             - 0.0.0.0:8000 [develop]
-        token: str, optional (default: "auto")
+        token: str, optional
             Authentication user token (required to POST)
             - "file" will search for a token in a .qa4smapirc file
             - "none" will force not using a token (only public commands)
             - "<token>" will use the passed token directly
-        protocol: str, optional (default: False)
+        protocol: str, optional
             Developer setting. Use https for the public instances (test, prod)
             or http for local instances.
             e.g., 127.0.0.1:8000
@@ -454,14 +482,27 @@ class Connection:
 
         return re.pandas
 
-    def download_configuration(self, run_id, out_dir):
+    def download_configuration(self, run_id, out_dir=None):
         """
         Download validation configuration used for a specific run.):
+
+        Parameters
+        ----------
+        run_id: str
+            UID of remote run to download configuration for
+        out_dir: str, optional
+            To save the config as a .json file, pass the storage path
+
+        Returns
+        -------
+        config: ValidationConfiguration
+            Downloaded Configuration object
         """
         url = self.url(f"validation-configuration/{run_id}")
         response = self.session.get(url)
         config = ValidationConfiguration(response.data)
-        config.dump(os.path.join(out_dir, f"{run_id}.json"))
+        if out_dir is not None:
+            config.dump(os.path.join(out_dir, f"{run_id}.json"))
         return config
 
     def download_results(self, run_id, out_dir, force_download=False):
@@ -471,7 +512,7 @@ class Connection:
         Parameters
         ----------
         run_id: str
-            Identifier of remote run to download results for
+            UID of remote run to download results for
         out_dir: str or Path
             Where the results are stored, will be created if it doesn't exist
             yet.
@@ -551,13 +592,17 @@ class Connection:
 
 
 if __name__ == '__main__':
+
     QA4SM_IP_OR_URL = "test.qa4sm.eu"   # "127.0.0.1:8000"  #
     QA4SM_API_TOKEN = "2b37740a1f6733c9cfc2e1e105abe974ff8c4204"
     username = "preimesberger"
     password = "i7j.r308"
     # conn.login(username, password)
+    qa4sm = Connection(QA4SM_IP_OR_URL, token='file')
     qa4sm = Connection(QA4SM_IP_OR_URL, QA4SM_API_TOKEN, protocol='https')
-    qa4sm.download_configuration("332f3873-a5bc-4df2-b8b2-0e025096f83e", "/tmp")
+    qa4sm.session
+    qa4sm.download_configuration("332f3873-a5bc-4df2-b8b2-0e025096f83e",
+                                 "/tmp")
 
     status, p = qa4sm.validation_status("6ec9ced3-3938-4f32-aec7-992bb1dba478")
     start, end = qa4sm.validation_time("6ec9ced3-3938-4f32-aec7-992bb1dba478")

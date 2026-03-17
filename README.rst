@@ -45,6 +45,24 @@ Environment variables
 A longer description of your project goes here...
 
 
+"""
+qa4sm list datasets
+qa4sm list all
+qa4sm list versions --dataset C3S_combined
+qa4sm list variables --dataset C3S_combined --version v202505
+qa4sm list filters --dataset C3S_combined --version v202505
+qa4sm list period --dataset C3S_combined --version v202505
+
+qa4sm status
+qa4sm login --username preimesberger --password
+qa4sm status run 9aeb663b-e24e-4541-8331-6ec3e0318d1f
+
+qa4sm download results 9aeb663b-e24e-4541-8331-6ec3e0318d1f
+qa4sm download config 9aeb663b-e24e-4541-8331-6ec3e0318d1f
+
+qa4sm validate ./config.json --override period=2020-12-31
+
+
 .. _pyscaffold-notes:
 
 Note

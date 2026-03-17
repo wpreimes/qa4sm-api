@@ -1,6 +1,0 @@
-instance: test.qa4sm.eu
-token: 2b37740a1f6733c9cfc2e1e105abe974ff8c4204
-candidate_dataset_id: 15
-configs:
-  - 01-SmosL2-vs-C3sComb-abs.json
-  - 02_SmosL2-vs-Era5Land-abs.json
